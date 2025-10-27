@@ -1,0 +1,31 @@
+services:
+  app:
+    image: php:8.2-apache
+    container_name: sgp-app
+    ports:
+      - "8000:80"
+    volumes:
+      - .:/var/www/html
+    working_dir: /var/www/html
+    environment:
+      - APACHE_DOCUMENT_ROOT=/var/www/html/public
+    command: >
+      bash -c "
+      apt-get update &&
+      apt-get install -y libzip-dev zip unzip git libpng-dev libjpeg-dev libfreetype6-dev &&
+      docker-php-ext-configure gd --with-freetype --with-jpeg &&
+      docker-php-ext-install pdo pdo_mysql zip gd &&
+      a2enmod rewrite &&
+      echo '<VirtualHost *:80>' > /etc/apache2/sites-available/000-default.conf &&
+      echo '    DocumentRoot /var/www/html/public' >> /etc/apache2/sites-available/000-default.conf &&
+      echo '    <Directory /var/www/html/public>' >> /etc/apache2/sites-available/000-default.conf &&
+      echo '        AllowOverride All' >> /etc/apache2/sites-available/000-default.conf &&
+      echo '        Require all granted' >> /etc/apache2/sites-available/000-default.conf &&
+      echo '    </Directory>' >> /etc/apache2/sites-available/000-default.conf &&
+      echo '</VirtualHost>' >> /etc/apache2/sites-available/000-default.conf &&
+      chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache &&
+      chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache &&
+      apache2-foreground
+      "
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
