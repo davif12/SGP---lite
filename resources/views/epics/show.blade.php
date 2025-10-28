@@ -138,17 +138,19 @@
                     </div>
                     <div class="card-body">
                         <div class="d-grid gap-2">
-                            <a href="{{ route('epics.index', $project) }}" class="btn btn-outline-primary">
-                                <i class="bi bi-arrow-left me-1"></i>Voltar aos Épicos
-                            </a>
-                            @can('update', $project)
-                                <a href="{{ route('projects.epics.edit', [$project, $epic]) }}" class="btn btn-warning">
-                                    <i class="bi bi-pencil me-1"></i>Editar Épico
+                            <div class="d-flex gap-2">
+                                <a href="{{ route('projects.epics.tasks.index', [$project, $epic]) }}" class="btn btn-modern btn-primary btn-sm">
+                                    <i class="bi bi-list-task me-1"></i>Ver Tasks
                                 </a>
-                                <a href="{{ route('projects.epics.create', $project) }}" class="btn btn-success">
-                                    <i class="bi bi-plus-circle me-1"></i>Novo Épico
+                                @can('update', $project)
+                                    <a href="{{ route('projects.epics.edit', [$project, $epic]) }}" class="btn btn-modern btn-warning btn-sm">
+                                        <i class="bi bi-pencil me-1"></i>Editar
+                                    </a>
+                                @endcan
+                                <a href="{{ route('epics.index', $project) }}" class="btn btn-modern btn-secondary btn-sm">
+                                    <i class="bi bi-arrow-left me-1"></i>Voltar
                                 </a>
-                            @endcan
+                            </div>
                         </div>
                     </div>
                 </div>

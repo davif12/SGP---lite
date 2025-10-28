@@ -14,6 +14,223 @@
         <!-- Scripts -->
         <link href="{{ mix('css/app.css') }}" rel="stylesheet">
         <script src="{{ mix('js/app.js') }}" defer></script>
+        
+        <!-- Notifications JavaScript -->
+        <script>
+            // Load notifications count on page load
+            document.addEventListener('DOMContentLoaded', function() {
+                updateNotificationBadge();
+                
+                // Update badge every 30 seconds
+                setInterval(updateNotificationBadge, 30000);
+                
+                // Test Bootstrap dropdowns
+                console.log('Bootstrap loaded:', typeof bootstrap !== 'undefined');
+                
+                // Initialize dropdowns manually if needed
+                if (typeof bootstrap !== 'undefined') {
+                    var dropdownElementList = [].slice.call(document.querySelectorAll('.dropdown-toggle'));
+                    var dropdownList = dropdownElementList.map(function (dropdownToggleEl) {
+                        return new bootstrap.Dropdown(dropdownToggleEl);
+                    });
+                }
+            });
+
+            function updateNotificationBadge() {
+                fetch('/api/notifications/unread-count')
+                    .then(response => response.json())
+                    .then(data => {
+                        const badge = document.getElementById('notification-badge');
+                        if (data.count > 0) {
+                            badge.textContent = data.count > 99 ? '99+' : data.count;
+                            badge.style.display = 'block';
+                        } else {
+                            badge.style.display = 'none';
+                        }
+                    })
+                    .catch(error => console.error('Error updating notification badge:', error));
+            }
+
+            function loadNotifications() {
+                const list = document.getElementById('notifications-list');
+                list.innerHTML = '<div class="text-center py-3"><div class="spinner-border spinner-border-sm" role="status"><span class="visually-hidden">Carregando...</span></div></div>';
+
+                fetch('/api/notifications/recent')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success && data.notifications.length > 0) {
+                            list.innerHTML = data.notifications.map(notification => `
+                                <div class="dropdown-item notification-item ${!notification.read_at ? 'unread' : ''}" 
+                                     onclick="handleNotificationClick('${notification.id}', '${notification.url}')">
+                                    <div class="d-flex">
+                                        <div class="flex-shrink-0 me-2">
+                                            <i class="${notification.icon} text-${notification.color}"></i>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <div class="fw-semibold small">${notification.title}</div>
+                                            <div class="text-muted small">${notification.message}</div>
+                                            <div class="text-muted" style="font-size: 0.75rem;">${notification.time_ago}</div>
+                                        </div>
+                                        ${!notification.read_at ? '<div class="flex-shrink-0"><span class="badge bg-primary rounded-pill" style="width: 8px; height: 8px;"></span></div>' : ''}
+                                    </div>
+                                </div>
+                            `).join('');
+                        } else {
+                            list.innerHTML = '<div class="dropdown-item-text text-center text-muted py-3">Nenhuma notificação</div>';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error loading notifications:', error);
+                        list.innerHTML = '<div class="dropdown-item-text text-center text-danger py-3">Erro ao carregar notificações</div>';
+                    });
+            }
+
+            function handleNotificationClick(notificationId, url) {
+                // Mark as read
+                fetch(`/api/notifications/${notificationId}/read`, {
+                    method: 'PATCH',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    }
+                })
+                .then(() => {
+                    updateNotificationBadge();
+                    if (url && url !== '#') {
+                        window.location.href = url;
+                    }
+                })
+                .catch(error => console.error('Error marking notification as read:', error));
+            }
+
+            function markAllAsRead() {
+                fetch('/api/notifications/read-all', {
+                    method: 'PATCH',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        updateNotificationBadge();
+                        loadNotifications();
+                    }
+                })
+                .catch(error => console.error('Error marking all as read:', error));
+            }
+
+            // Global Search Functionality
+            let searchTimeout;
+            const searchInput = document.getElementById('global-search');
+            const searchResults = document.getElementById('search-results');
+
+            if (searchInput) {
+                searchInput.addEventListener('input', function() {
+                    clearTimeout(searchTimeout);
+                    const query = this.value.trim();
+
+                    if (query.length < 2) {
+                        hideSearchResults();
+                        return;
+                    }
+
+                    searchTimeout = setTimeout(() => {
+                        performGlobalSearch(query);
+                    }, 300);
+                });
+
+                searchInput.addEventListener('focus', function() {
+                    if (this.value.trim().length >= 2) {
+                        searchResults.style.display = 'block';
+                    }
+                });
+
+                document.addEventListener('click', function(e) {
+                    if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
+                        hideSearchResults();
+                    }
+                });
+            }
+
+            function performGlobalSearch(query) {
+                searchResults.innerHTML = '<div class="p-3 text-center"><div class="spinner-border spinner-border-sm" role="status"></div></div>';
+                searchResults.style.display = 'block';
+
+                fetch('/api/search/global?q=' + encodeURIComponent(query))
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success && data.results.length > 0) {
+                            displaySearchResults(data.results);
+                        } else {
+                            searchResults.innerHTML = '<div class="p-3 text-muted text-center">Nenhum resultado encontrado</div>';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Search error:', error);
+                        searchResults.innerHTML = '<div class="p-3 text-danger text-center">Erro na busca</div>';
+                    });
+            }
+
+            function displaySearchResults(results) {
+                const html = results.map(result => 
+                    '<a href="' + result.url + '" class="d-block p-3 text-decoration-none border-bottom search-result-item">' +
+                        '<div class="d-flex align-items-start">' +
+                            '<div class="flex-shrink-0 me-2">' +
+                                '<i class="' + result.icon + ' text-' + result.color + '"></i>' +
+                            '</div>' +
+                            '<div class="flex-grow-1">' +
+                                '<div class="fw-semibold text-dark">' + result.title + '</div>' +
+                                '<div class="text-muted small">' + (result.description || '') + '</div>' +
+                                '<div class="d-flex gap-2 mt-1">' +
+                                    '<span class="badge bg-' + result.color + ' text-capitalize">' + result.type + '</span>' +
+                                '</div>' +
+                            '</div>' +
+                        '</div>' +
+                    '</a>'
+                ).join('');
+
+                searchResults.innerHTML = html + 
+                    '<div class="p-2 border-top bg-light text-center">' +
+                    '<a href="/search?search=' + encodeURIComponent(searchInput.value) + '" class="btn btn-sm btn-outline-primary">Ver todos os resultados</a>' +
+                    '</div>';
+            }
+
+            function hideSearchResults() {
+                searchResults.style.display = 'none';
+            }
+        </script>
+        
+        <style>
+            .notification-dropdown .notification-item {
+                cursor: pointer;
+                transition: background-color 0.2s;
+            }
+            
+            .notification-dropdown .notification-item:hover {
+                background-color: var(--bs-gray-100);
+            }
+            
+            .notification-dropdown .notification-item.unread {
+                background-color: var(--bs-blue-50);
+            }
+            
+            .notification-dropdown .notification-item.unread:hover {
+                background-color: var(--bs-blue-100);
+            }
+            
+            /* Search Styles */
+            .search-result-item:hover {
+                background-color: var(--bs-gray-50);
+            }
+            
+            #search-results {
+                border-top: none !important;
+            }
+            
+            #global-search:focus + #search-results {
+                display: block;
+            }
+        </style>
     </head>
     <body class="app-layout">
         <!-- Header -->
