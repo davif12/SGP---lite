@@ -3,150 +3,117 @@
         <div class="d-flex justify-content-between align-items-center">
             <div>
                 <h1 class="h3 mb-0 text-gradient">Board Kanban</h1>
-                <p class="text-muted mb-0">Gerencie suas tarefas com drag & drop</p>
-            </div>
-            <div class="d-flex gap-2">
-                <button class="btn btn-modern btn-secondary btn-sm" onclick="refreshBoard()">
-                    <i class="bi bi-arrow-clockwise me-1"></i>Atualizar
-                </button>
-                <button class="btn btn-modern btn-primary btn-sm" onclick="showAddTaskModal()">
-                    <i class="bi bi-plus-circle me-1"></i>Nova Tarefa
-                </button>
+                <p class="text-muted mb-0">Selecione um projeto para visualizar o board</p>
             </div>
         </div>
     </x-slot>
 
-    <!-- Board Container -->
-    <div class="kanban-board">
-        <!-- Backlog Column -->
-        <div class="kanban-column">
-            <div class="kanban-header">
-                <h6>📋 Backlog</h6>
-                <span class="badge bg-secondary task-count">3</span>
-            </div>
-            <div class="kanban-cards" data-status="backlog">
-                <!-- Sample Cards -->
-                <div class="kanban-card" data-task-id="1">
-                    <div class="card-title">Implementar autenticação OAuth</div>
-                    <div class="card-meta">
-                        <span class="badge badge-modern badge-danger">Alta</span>
-                        <small class="text-muted">João Silva</small>
+    @if($projects->count() > 0)
+        <!-- Project Selection -->
+        <div class="row g-4">
+            @foreach($projects as $project)
+                <div class="col-md-6 col-xl-4">
+                    <div class="card-modern h-100 project-board-card">
+                        <div class="card-body text-center">
+                            <div class="mb-3">
+                                <div class="bg-primary rounded-circle d-inline-flex align-items-center justify-content-center" 
+                                     style="width: 60px; height: 60px;">
+                                    <i class="bi bi-kanban text-white fs-3"></i>
+                                </div>
+                            </div>
+                            
+                            <h5 class="card-title">{{ $project->name }}</h5>
+                            
+                            @if($project->description)
+                                <p class="text-muted small mb-3">{{ Str::limit($project->description, 80) }}</p>
+                            @endif
+                            
+                            <!-- Project Stats -->
+                            <div class="row g-2 mb-4">
+                                <div class="col-4">
+                                    <div class="text-center">
+                                        <div class="fw-bold text-primary">{{ $project->epics->count() }}</div>
+                                        <small class="text-muted">Épicos</small>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="text-center">
+                                        @php
+                                            $totalTasks = $project->epics->sum(function($epic) {
+                                                return $epic->tasks->count();
+                                            });
+                                        @endphp
+                                        <div class="fw-bold text-success">{{ $totalTasks }}</div>
+                                        <small class="text-muted">Tasks</small>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="text-center">
+                                        <div class="fw-bold text-info">{{ $project->users->count() + 1 }}</div>
+                                        <small class="text-muted">Membros</small>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Task Status Overview -->
+                            @php
+                                $allTasks = $project->epics->flatMap->tasks;
+                                $todoTasks = $allTasks->where('status', 'todo')->count();
+                                $inProgressTasks = $allTasks->where('status', 'in_progress')->count();
+                                $reviewTasks = $allTasks->where('status', 'review')->count();
+                                $doneTasks = $allTasks->where('status', 'done')->count();
+                            @endphp
+                            
+                            @if($totalTasks > 0)
+                                <div class="mb-3">
+                                    <div class="d-flex justify-content-between small text-muted mb-1">
+                                        <span>Progresso</span>
+                                        <span>{{ $doneTasks }}/{{ $totalTasks }}</span>
+                                    </div>
+                                    <div class="progress" style="height: 6px;">
+                                        <div class="progress-bar" 
+                                             style="width: {{ $totalTasks > 0 ? ($doneTasks / $totalTasks) * 100 : 0 }}%"></div>
+                                    </div>
+                                </div>
+                                
+                                <div class="d-flex justify-content-center gap-2 mb-3">
+                                    @if($todoTasks > 0)
+                                        <span class="badge badge-modern badge-secondary">{{ $todoTasks }} A Fazer</span>
+                                    @endif
+                                    @if($inProgressTasks > 0)
+                                        <span class="badge badge-modern badge-primary">{{ $inProgressTasks }} Em Progresso</span>
+                                    @endif
+                                    @if($reviewTasks > 0)
+                                        <span class="badge badge-modern badge-warning">{{ $reviewTasks }} Revisão</span>
+                                    @endif
+                                    @if($doneTasks > 0)
+                                        <span class="badge badge-modern badge-success">{{ $doneTasks }} Concluído</span>
+                                    @endif
+                                </div>
+                            @endif
+                            
+                            <a href="{{ route('board.index', $project) }}" class="btn btn-modern btn-primary">
+                                <i class="bi bi-kanban me-1"></i>Abrir Board
+                            </a>
+                        </div>
                     </div>
                 </div>
-                
-                <div class="kanban-card" data-task-id="2">
-                    <div class="card-title">Criar testes unitários</div>
-                    <div class="card-meta">
-                        <span class="badge badge-modern badge-warning">Média</span>
-                        <small class="text-muted">Maria Santos</small>
-                    </div>
-                </div>
-                
-                <div class="kanban-card" data-task-id="3">
-                    <div class="card-title">Documentar API endpoints</div>
-                    <div class="card-meta">
-                        <span class="badge badge-modern badge-success">Baixa</span>
-                        <small class="text-muted">Pedro Costa</small>
-                    </div>
-                </div>
-            </div>
-            <button class="btn btn-link text-muted w-100 add-task-btn" data-status="backlog">
-                <i class="bi bi-plus me-1"></i>Adicionar tarefa
-            </button>
+            @endforeach
         </div>
-
-        <!-- In Progress Column -->
-        <div class="kanban-column">
-            <div class="kanban-header">
-                <h6>🚀 Em Progresso</h6>
-                <span class="badge bg-primary task-count">2</span>
+    @else
+        <div class="text-center py-5">
+            <div class="mb-4">
+                <i class="bi bi-kanban display-1 text-muted"></i>
             </div>
-            <div class="kanban-cards" data-status="in_progress">
-                <div class="kanban-card" data-task-id="4">
-                    <div class="card-title">Desenvolver dashboard</div>
-                    <div class="card-meta">
-                        <span class="badge badge-modern badge-danger">Alta</span>
-                        <small class="text-muted">Ana Lima</small>
-                    </div>
-                </div>
-                
-                <div class="kanban-card" data-task-id="5">
-                    <div class="card-title">Integrar sistema de pagamento</div>
-                    <div class="card-meta">
-                        <span class="badge badge-modern badge-warning">Média</span>
-                        <small class="text-muted">Carlos Oliveira</small>
-                    </div>
-                </div>
+            <h5 class="text-muted">Nenhum projeto encontrado</h5>
+            <p class="text-muted">Você precisa ter projetos com épicos e tasks para usar o board Kanban.</p>
+            <div class="mt-4">
+                <a href="{{ route('projects.create') }}" class="btn btn-modern btn-primary">
+                    <i class="bi bi-plus-circle me-1"></i>Criar Primeiro Projeto
+                </a>
             </div>
-            <button class="btn btn-link text-muted w-100 add-task-btn" data-status="in_progress">
-                <i class="bi bi-plus me-1"></i>Adicionar tarefa
-            </button>
         </div>
-
-        <!-- Review Column -->
-        <div class="kanban-column">
-            <div class="kanban-header">
-                <h6>👀 Em Revisão</h6>
-                <span class="badge bg-warning task-count">1</span>
-            </div>
-            <div class="kanban-cards" data-status="review">
-                <div class="kanban-card" data-task-id="6">
-                    <div class="card-title">Implementar notificações push</div>
-                    <div class="card-meta">
-                        <span class="badge badge-modern badge-warning">Média</span>
-                        <small class="text-muted">Lucas Ferreira</small>
-                    </div>
-                </div>
-            </div>
-            <button class="btn btn-link text-muted w-100 add-task-btn" data-status="review">
-                <i class="bi bi-plus me-1"></i>Adicionar tarefa
-            </button>
-        </div>
-
-        <!-- Done Column -->
-        <div class="kanban-column">
-            <div class="kanban-header">
-                <h6>✅ Concluído</h6>
-                <span class="badge bg-success task-count">4</span>
-            </div>
-            <div class="kanban-cards" data-status="done">
-                <div class="kanban-card" data-task-id="7">
-                    <div class="card-title">Configurar CI/CD pipeline</div>
-                    <div class="card-meta">
-                        <span class="badge badge-modern badge-success">Baixa</span>
-                        <small class="text-muted">Roberto Silva</small>
-                    </div>
-                </div>
-                
-                <div class="kanban-card" data-task-id="8">
-                    <div class="card-title">Criar layout responsivo</div>
-                    <div class="card-meta">
-                        <span class="badge badge-modern badge-warning">Média</span>
-                        <small class="text-muted">Fernanda Costa</small>
-                    </div>
-                </div>
-                
-                <div class="kanban-card" data-task-id="9">
-                    <div class="card-title">Implementar sistema de login</div>
-                    <div class="card-meta">
-                        <span class="badge badge-modern badge-danger">Alta</span>
-                        <small class="text-muted">Gabriel Santos</small>
-                    </div>
-                </div>
-                
-                <div class="kanban-card" data-task-id="10">
-                    <div class="card-title">Configurar banco de dados</div>
-                    <div class="card-meta">
-                        <span class="badge badge-modern badge-success">Baixa</span>
-                        <small class="text-muted">Isabela Lima</small>
-                    </div>
-                </div>
-            </div>
-            <button class="btn btn-link text-muted w-100 add-task-btn" data-status="done">
-                <i class="bi bi-plus me-1"></i>Adicionar tarefa
-            </button>
-        </div>
-    </div>
+    @endif
 
     <!-- Add Task Modal -->
     <div class="modal fade" id="addTaskModal" tabindex="-1">

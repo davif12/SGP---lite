@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Project;
 use App\Models\User;
+use App\Notifications\ProjectMemberAdded;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -106,6 +107,9 @@ class ProjectController extends Controller
         }
 
         $project->users()->attach($user->id, ['role' => 'member']);
+
+        // Send notification to the new member
+        $user->notify(new ProjectMemberAdded($project, auth()->user()));
 
         return back()->with('success', 'Membro adicionado com sucesso!');
     }

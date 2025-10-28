@@ -5,6 +5,10 @@ import './kanban';
 
 import Alpine from 'alpinejs';
 
+// Make Bootstrap available globally
+import * as bootstrap from 'bootstrap';
+window.bootstrap = bootstrap;
+
 // Make Chart.js available globally
 window.Chart = Chart;
 window.Alpine = Alpine;
