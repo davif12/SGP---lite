@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\TaskUpdated;
 use App\Models\Epic;
 use App\Models\Project;
 use App\Models\Task;
@@ -159,6 +160,13 @@ class TaskController extends Controller
         // Send notification if status changed and task is assigned to someone else
         if ($oldStatus !== $validated['status'] && $task->assigned_to && $task->assigned_to !== auth()->id()) {
             $task->assignedUser->notify(new TaskStatusChanged($task, $oldStatus, $validated['status'], auth()->user()));
+        }
+
+        // Broadcast task update to project members
+        if ($oldStatus !== $validated['status']) {
+            broadcast(new TaskUpdated($task, auth()->user(), [
+                'status' => ['from' => $oldStatus, 'to' => $validated['status']]
+            ]));
         }
 
         return response()->json([

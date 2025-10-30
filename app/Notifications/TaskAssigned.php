@@ -2,8 +2,10 @@
 
 namespace App\Notifications;
 
+use App\Events\NotificationSent;
 use App\Models\Task;
 use App\Models\User;
+use App\Traits\BroadcastsNotifications;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -11,7 +13,7 @@ use Illuminate\Notifications\Notification;
 
 class TaskAssigned extends Notification implements ShouldQueue
 {
-    use Queueable;
+    use Queueable, BroadcastsNotifications;
 
     protected $task;
     protected $assignedBy;
@@ -96,5 +98,15 @@ class TaskAssigned extends Notification implements ShouldQueue
             'icon' => 'bi-person-check',
             'color' => 'primary',
         ];
+    }
+
+    /**
+     * Handle notification sent event
+     */
+    public function sent($notifiable, $channel)
+    {
+        if ($channel === 'database') {
+            $this->broadcastNotification($notifiable, $this);
+        }
     }
 }

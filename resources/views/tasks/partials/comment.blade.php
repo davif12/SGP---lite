@@ -50,6 +50,39 @@
                 <div class="comment-content">
                     {!! nl2br(e($comment->content)) !!}
                 </div>
+
+                <!-- Comment Attachments -->
+                @if($comment->attachments->count() > 0)
+                    <div class="comment-attachments mt-2">
+                        <div class="row g-2">
+                            @foreach($comment->attachments as $attachment)
+                                <div class="col-md-6">
+                                    <div class="attachment-item d-flex align-items-center p-2 bg-white rounded border">
+                                        <div class="flex-shrink-0 me-2">
+                                            <i class="{{ $attachment->icon }} text-{{ $attachment->color }} fs-5"></i>
+                                        </div>
+                                        <div class="flex-grow-1 min-w-0">
+                                            <div class="fw-medium text-truncate" title="{{ $attachment->original_name }}">
+                                                {{ $attachment->original_name }}
+                                            </div>
+                                            <small class="text-muted">{{ $attachment->human_size }}</small>
+                                        </div>
+                                        <div class="flex-shrink-0">
+                                            <a href="{{ $attachment->url }}" class="btn btn-sm btn-outline-primary" target="_blank" title="Download">
+                                                <i class="bi bi-download"></i>
+                                            </a>
+                                            @if($attachment->is_image)
+                                                <button class="btn btn-sm btn-outline-secondary ms-1" onclick="previewImage('{{ $attachment->url }}', '{{ $attachment->original_name }}')" title="Visualizar">
+                                                    <i class="bi bi-eye"></i>
+                                                </button>
+                                            @endif
+                                        </div>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
                 
                 <!-- Edit Form (Hidden by default) -->
                 <form class="comment-edit-form d-none mt-2" data-comment-id="{{ $comment->id }}">

@@ -198,6 +198,154 @@
             function hideSearchResults() {
                 searchResults.style.display = 'none';
             }
+
+            // Real-time notifications setup
+            if (typeof window.Echo !== 'undefined') {
+                // Listen for notifications on user's private channel
+                window.Echo.private(`user.{{ auth()->id() }}`)
+                    .listen('.notification.sent', (e) => {
+                        handleRealTimeNotification(e.notification);
+                        updateNotificationBadge();
+                    });
+
+                // Listen for online users
+                window.Echo.join('online-users')
+                    .here((users) => {
+                        console.log('Users currently online:', users);
+                        updateOnlineUsers(users);
+                    })
+                    .joining((user) => {
+                        console.log('User joined:', user.name);
+                        addOnlineUser(user);
+                        showToast(`${user.name} entrou online`, 'info');
+                    })
+                    .leaving((user) => {
+                        console.log('User left:', user.name);
+                        removeOnlineUser(user);
+                        showToast(`${user.name} saiu offline`, 'secondary');
+                    });
+
+                // Listen for task updates on current project (if on project page)
+                @if(request()->route() && request()->route()->hasParameter('project'))
+                window.Echo.private('project.{{ request()->route()->parameter("project")->id ?? "" }}')
+                    .listen('.task.updated', (e) => {
+                        handleTaskUpdate(e);
+                    });
+                @endif
+            }
+
+            function handleRealTimeNotification(notification) {
+                // Show toast notification
+                showToast(notification.message, 'primary', notification.icon);
+                
+                // Play notification sound (optional)
+                playNotificationSound();
+                
+                // Update notification dropdown if it's open
+                if (document.querySelector('.notification-dropdown.show')) {
+                    loadNotifications();
+                }
+            }
+
+            function handleTaskUpdate(data) {
+                // Update task in Kanban board if present
+                const taskCard = document.querySelector(`[data-task-id="${data.task.id}"]`);
+                if (taskCard) {
+                    updateTaskCard(taskCard, data.task);
+                    showToast(`Task "${data.task.title}" foi atualizada por ${data.user.name}`, 'info');
+                }
+            }
+
+            function updateTaskCard(card, task) {
+                // Update task status badge
+                const statusBadge = card.querySelector('.status-badge');
+                if (statusBadge) {
+                    statusBadge.textContent = task.status_label;
+                    statusBadge.className = `badge status-badge bg-${getStatusColor(task.status)}`;
+                }
+                
+                // Update assigned user
+                const assignedUser = card.querySelector('.assigned-user');
+                if (assignedUser && task.assigned_user) {
+                    assignedUser.textContent = task.assigned_user.name;
+                }
+            }
+
+            function getStatusColor(status) {
+                const colors = {
+                    'todo': 'secondary',
+                    'in_progress': 'primary', 
+                    'review': 'warning',
+                    'done': 'success'
+                };
+                return colors[status] || 'secondary';
+            }
+
+            function updateOnlineUsers(users) {
+                // Update online users indicator
+                const onlineCount = document.getElementById('online-users-count');
+                if (onlineCount) {
+                    onlineCount.textContent = users.length;
+                }
+            }
+
+            function addOnlineUser(user) {
+                // Add user to online list
+                updateOnlineUsers([user]); // Simplified for demo
+            }
+
+            function removeOnlineUser(user) {
+                // Remove user from online list
+                updateOnlineUsers([]); // Simplified for demo
+            }
+
+            function showToast(message, type = 'info', icon = null) {
+                // Create toast notification
+                const toast = document.createElement('div');
+                toast.className = `toast align-items-center text-white bg-${type} border-0`;
+                toast.setAttribute('role', 'alert');
+                toast.innerHTML = `
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            ${icon ? `<i class="${icon} me-2"></i>` : ''}
+                            ${message}
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                `;
+                
+                // Add to toast container
+                let toastContainer = document.getElementById('toast-container');
+                if (!toastContainer) {
+                    toastContainer = document.createElement('div');
+                    toastContainer.id = 'toast-container';
+                    toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+                    toastContainer.style.zIndex = '9999';
+                    document.body.appendChild(toastContainer);
+                }
+                
+                toastContainer.appendChild(toast);
+                
+                // Show toast
+                const bsToast = new bootstrap.Toast(toast, { delay: 5000 });
+                bsToast.show();
+                
+                // Remove from DOM after hiding
+                toast.addEventListener('hidden.bs.toast', () => {
+                    toast.remove();
+                });
+            }
+
+            function playNotificationSound() {
+                // Play a subtle notification sound
+                try {
+                    const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIG2m98OScTgwOUarm7blmGgU7k9n1unEiBC13yO/eizEIHWq+8+OWT');
+                    audio.volume = 0.1;
+                    audio.play().catch(() => {}); // Ignore errors if audio fails
+                } catch (e) {
+                    // Ignore audio errors
+                }
+            }
         </script>
         
         <style>

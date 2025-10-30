@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class Comment extends Model
 {
@@ -30,6 +31,11 @@ class Comment extends Model
     public function task(): BelongsTo
     {
         return $this->belongsTo(Task::class);
+    }
+
+    public function attachments(): MorphMany
+    {
+        return $this->morphMany(Attachment::class, 'attachable')->orderBy('created_at', 'desc');
     }
 
     // Accessors

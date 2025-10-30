@@ -28,7 +28,7 @@ class CommentController extends Controller
             'task_id' => $task->id,
         ]);
 
-        $comment->load('user');
+        $comment->load(['user', 'attachments']);
 
         // Notify task assignee and project members (except comment author)
         $usersToNotify = collect();
@@ -129,7 +129,7 @@ class CommentController extends Controller
         Gate::authorize('view', $task->epic->project);
 
         $comments = $task->comments()
-            ->with('user')
+            ->with(['user', 'attachments'])
             ->oldest()
             ->get()
             ->map(function ($comment) {
@@ -143,6 +143,19 @@ class CommentController extends Controller
                     'time_ago' => $comment->time_ago,
                     'is_editable' => $comment->is_editable,
                     'is_deletable' => $comment->is_deletable,
+                    'attachments' => $comment->attachments->map(function ($attachment) {
+                        return [
+                            'id' => $attachment->id,
+                            'original_name' => $attachment->original_name,
+                            'size' => $attachment->human_size,
+                            'mime_type' => $attachment->mime_type,
+                            'is_image' => $attachment->is_image,
+                            'icon' => $attachment->icon,
+                            'color' => $attachment->color,
+                            'url' => $attachment->url,
+                            'thumbnail_url' => $attachment->thumbnail_url,
+                        ];
+                    }),
                 ];
             });
 

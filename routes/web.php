@@ -1,11 +1,14 @@
 <?php
 
+use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\EpicController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\SearchController;
+use App\Http\Controllers\SubtaskController;
 use App\Http\Controllers\TaskController;
+use App\Http\Controllers\TimeEntryController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -62,6 +65,30 @@ Route::middleware('auth')->group(function () {
     Route::get('api/search/global', [SearchController::class, 'global'])->name('search.global');
     Route::get('api/search/tasks', [SearchController::class, 'tasks'])->name('search.tasks');
     Route::get('api/search/filter-options', [SearchController::class, 'filterOptions'])->name('search.filter-options');
+    
+    // Attachment routes
+    Route::post('api/attachments/upload', [AttachmentController::class, 'upload'])->name('attachments.upload');
+    Route::get('api/attachments', [AttachmentController::class, 'index'])->name('attachments.index');
+    Route::get('attachments/{attachment}/download', [AttachmentController::class, 'download'])->name('attachments.download');
+    Route::get('attachments/{attachment}/thumbnail', [AttachmentController::class, 'thumbnail'])->name('attachments.thumbnail');
+    Route::delete('api/attachments/{attachment}', [AttachmentController::class, 'destroy'])->name('attachments.destroy');
+    
+    // Time tracking routes
+    Route::get('api/tasks/{task}/time-entries', [TimeEntryController::class, 'index'])->name('time-entries.index');
+    Route::post('api/tasks/{task}/time-entries/start', [TimeEntryController::class, 'start'])->name('time-entries.start');
+    Route::post('api/tasks/{task}/time-entries/{timeEntry}/stop', [TimeEntryController::class, 'stop'])->name('time-entries.stop');
+    Route::post('api/tasks/{task}/time-entries', [TimeEntryController::class, 'store'])->name('time-entries.store');
+    Route::put('api/tasks/{task}/time-entries/{timeEntry}', [TimeEntryController::class, 'update'])->name('time-entries.update');
+    Route::delete('api/tasks/{task}/time-entries/{timeEntry}', [TimeEntryController::class, 'destroy'])->name('time-entries.destroy');
+    Route::get('api/time-entries/running', [TimeEntryController::class, 'running'])->name('time-entries.running');
+    Route::get('api/time-entries/stats', [TimeEntryController::class, 'stats'])->name('time-entries.stats');
+    
+    // Subtask routes
+    Route::get('api/tasks/{task}/subtasks', [SubtaskController::class, 'index'])->name('subtasks.index');
+    Route::post('api/tasks/{task}/subtasks', [SubtaskController::class, 'store'])->name('subtasks.store');
+    Route::put('api/tasks/{task}/subtasks/{subtask}', [SubtaskController::class, 'update'])->name('subtasks.update');
+    Route::delete('api/tasks/{task}/subtasks/{subtask}', [SubtaskController::class, 'destroy'])->name('subtasks.destroy');
+    Route::post('api/tasks/{task}/subtasks/reorder', [SubtaskController::class, 'reorder'])->name('subtasks.reorder');
     
     // Board Kanban route
     Route::get('/board/{project?}', [TaskController::class, 'board'])->name('board.index');
